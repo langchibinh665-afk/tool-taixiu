@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8" />
-<title>Tool Tài Xỉu - Bình</title>
+<title>Tool Tài Xỉu - Nh Thuc</title>
 <title>cờ bạc không giúp ta đổi đồi,nó chỉ giúp đổi số dư tk</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
@@ -15,7 +15,7 @@
   button:hover{background:#b17dff;}
   #result{margin-top:18px;font-size:34px;font-weight:700;text-shadow:0 0 8px #bca0bc;min-height:56px;display:flex;align-items:center;justify-content:center;}
   #result.tai{ color:#e3ebeb; text-shadow:0 0 8px #b2e4e0,0 0 20px #a6d3cf; }
-  #result.xiu{ color:#190219; text-shadow:0 0 8px #010001,0 0 20px #210221; }
+  #result.xiu{ color:#190219; text-shadow:0 0 8px #fdffffff,0 0 20px #f5f0f5ff; }
   #keyTimer{margin-top:8px;color:#dcd0ff;font-size:14px;}
   .small{font-size:13px;color:#e8d8ff;margin-top:6px;}
 </style>
@@ -30,6 +30,7 @@
     <input id="keyInput" placeholder="Nhập key..." autocomplete="off" />
     <div class="btns">
       <button onclick="checkKey()">Xác thực</button>
+      <button onclick="clearAll()">xóa local</button>
     </div>
     <p id="keyMsg" class="small"></p>
   </div>
@@ -37,14 +38,14 @@
   <!-- MAIN TOOL -->
   <div id="mainTool" class="box" style="display:none;">
     <h3>Phân tích từ MD5</h3>
-    <input id="md5Input" placeholder="Dán chuỗi MD5 (32 ký tự hex)..." autocomplete="off"/>
+    <input id="md5Input" placeholder="Dán mã MD5 (32 ký tự hex)..." autocomplete="off"/>
     <div class="btns">
       <button onclick="runAnalyze()">Phân Tích</button>
     </div>
 
     <div id="keyTimer" aria-live="polite"></div>
     <div id="result" aria-live="polite"></div>
-    <p class="small">Chú ý: tool chỉ đưa ra kết quả tham khảo-dựa vào bản thân mà kiếm.</p>
+    <p class="small">Chú ý: tool chỉ là công cụ tham khảo .</p>
   </div>
 
 <script>
@@ -65,7 +66,7 @@
 const KEY_LIST = {
   "BINHVIPPRO": 10000000000,
   "VIP1": 1440,
-  "free30p":30,
+  "thanhngu":60,
 };
 
 // localStorage keys
