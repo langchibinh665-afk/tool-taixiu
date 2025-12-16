@@ -2,8 +2,8 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8" />
-<title>Tool Tài Xỉu - Nh Thuc</title>
-<title>cờ bạc không giúp ta đổi đồi,nó chỉ giúp đổi số dư tk</title>
+<title>Tool Tài Xỉu - BÌNH</title>
+<title>cờ bạc không giúp ta đổi đời,nó chỉ giúp đổi số dư tk</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
   body{background:#0d011a;color:#e5e1ea;font-family:Arial,sans-serif;padding:18px;text-align:center;}
@@ -20,32 +20,39 @@
   .small{font-size:13px;color:#e8d8ff;margin-top:6px;}
 </style>
 </head>
+
 <body>
-  <h1>Tool Tài Xỉu - BÌNH</h1>
-  <h1>cờ bạc không giúp ta đổi đồi,nó chỉ giúp đổi số dư tk</h1>
 
-  <!-- KEY -->
-  <div id="keyBox" class="box">
-    <h3>Nhập key</h3>
-    <input id="keyInput" placeholder="Nhập key..." autocomplete="off" />
-    <div class="btns">
-      <button onclick="checkKey()">Xác thực</button>
-    </div>
-    <p id="keyMsg" class="small"></p>
+<!-- 🔊 NHẠC NỀN (THÊM) -->
+<audio id="bgMusic" loop preload="auto">
+  <source src="music.mp3" type="audio/mpeg">
+</audio>
+
+<h1>Tool Tài Xỉu - BÌNH</h1>
+<h1>cờ bạc không giúp ta đổi đời,nó chỉ giúp đổi số dư tk</h1>
+
+<!-- KEY -->
+<div id="keyBox" class="box">
+  <h3>Nhập key</h3>
+  <input id="keyInput" placeholder="Nhập key..." autocomplete="off" />
+  <div class="btns">
+    <button onclick="checkKey()">Xác thực</button>
+  </div>
+  <p id="keyMsg" class="small"></p>
+</div>
+
+<!-- MAIN TOOL -->
+<div id="mainTool" class="box" style="display:none;">
+  <h3>Phân tích từ MD5</h3>
+  <input id="md5Input" placeholder="Dán chuỗi MD5 " autocomplete="off"/>
+  <div class="btns">
+    <button onclick="runAnalyze()">Phân Tích</button>
   </div>
 
-  <!-- MAIN TOOL -->
-  <div id="mainTool" class="box" style="display:none;">
-    <h3>Phân tích từ MD5</h3>
-    <input id="md5Input" placeholder="Dán mã MD5 (32 ký tự hex)..." autocomplete="off"/>
-    <div class="btns">
-      <button onclick="runAnalyze()">Phân Tích</button>
-    </div>
-
-    <div id="keyTimer" aria-live="polite"></div>
-    <div id="result" aria-live="polite"></div>
-    <p class="small">Chú ý: tool chỉ là công cụ tham khảo .</p>
-  </div>
+  <div id="keyTimer" aria-live="polite"></div>
+  <div id="result" aria-live="polite"></div>
+  <p class="small">Chú ý: tool chỉ là công cụ tham khảo .</p>
+</div>
 
 <script>
 /*
@@ -64,9 +71,7 @@
 // ======== Danh sách key (client demo) =======
 const KEY_LIST = {
   "BINHVIPPRO": 10000000000,
-  "VIP1": 1440,
-  "thanhngu":60,
-  "binhdz":482.880,
+  "free1h":60,
 };
 
 // localStorage keys
@@ -94,31 +99,25 @@ function checkKey(){
   msg.textContent = '';
   if(!k){ msg.textContent = 'Nhập key trước.'; return; }
 
-  // không hiển thị gợi ý key ở bất kỳ đâu
-  // kiểm tra đã dùng chưa
   if(isKeyUsed(k)){
     msg.textContent = 'Key này đã bị sử dụng trước đó. Không thể dùng lại.';
     return;
   }
 
-  // key hợp lệ nếu tồn tại trong KEY_LIST
   if(!KEY_LIST[k]){
     msg.textContent = 'Key không hợp lệ.';
     return;
   }
 
-  // tạo access: expiresAt = now + minutes
   const mins = Number(KEY_LIST[k]) || 60;
   const expiresAt = Date.now() + mins * 60 * 1000;
   const access = { key: k, expiresAt };
   localStorage.setItem(LS_ACCESS, JSON.stringify(access));
 
-  // Hiện tool
   document.getElementById('keyBox').style.display = 'none';
   document.getElementById('mainTool').style.display = 'block';
   document.getElementById('keyMsg').textContent = 'Đã xác thực. Tool sẵn sàng.';
-  startKeyTimer(); // start countdown
-  // (chưa đánh dấu key là used, sẽ mark khi hết hạn)
+  startKeyTimer();
 }
 
 // ======== Restore access on load ========
@@ -128,15 +127,12 @@ function restoreAccess(){
     if(!raw) return false;
     const acc = JSON.parse(raw);
     if(!acc || !acc.key || !acc.expiresAt) return false;
-    // If already used (shouldn't be), block
     if(isKeyUsed(acc.key)) { localStorage.removeItem(LS_ACCESS); return false; }
-    // If expired already -> mark used and remove
     if(Date.now() >= acc.expiresAt){
       markKeyUsed(acc.key);
       localStorage.removeItem(LS_ACCESS);
       return false;
     }
-    // valid: show UI
     document.getElementById('keyBox').style.display = 'none';
     document.getElementById('mainTool').style.display = 'block';
     document.getElementById('keyMsg').textContent = 'Đã đăng nhập (lưu trên thiết bị).';
@@ -152,38 +148,30 @@ function startKeyTimer(){
   keyTimerInterval = setInterval(()=>{
     const raw = localStorage.getItem(LS_ACCESS);
     const timerEl = document.getElementById('keyTimer');
-    const keyMsg = document.getElementById('keyMsg');
     if(!raw){ timerEl.textContent = ''; clearInterval(keyTimerInterval); return; }
     const acc = JSON.parse(raw);
-    const now = Date.now();
-    const remain = acc.expiresAt - now;
+    const remain = acc.expiresAt - Date.now();
     if(remain <= 0){
-      // expired: mark used, logout
       markKeyUsed(acc.key);
       localStorage.removeItem(LS_ACCESS);
       clearInterval(keyTimerInterval);
       document.getElementById('mainTool').style.display = 'none';
       document.getElementById('keyBox').style.display = 'block';
-      document.getElementById('keyMsg').textContent = 'Key đã hết hạn và đã bị đánh dấu là đã dùng.';
+      document.getElementById('keyMsg').textContent = 'Key đã hết hạn.';
       timerEl.textContent = '';
       document.getElementById('result').innerHTML = '';
       return;
     }
-    // format mm:ss
     const mm = Math.floor(remain / 60000);
     const ss = Math.floor((remain % 60000) / 1000);
     timerEl.textContent = `time key : ${mm} phút ${ss} giây`;
   }, 1000);
 }
 
-// ======== Analysis functions (3 thuật toán + vote) ========
-// check md5
+// ======== Analysis functions ========
 function isMD5(s){ return /^[a-fA-F0-9]{32}$/.test(s); }
-
-// hex pair to dec
 function hexPairToDec(pair){ return parseInt(pair,16); }
 
-// Algorithm 1: Hex-Sum (4 pair)
 function algoHexSum(md5){
   const s = md5.slice(0,8);
   let sum = 0;
@@ -195,7 +183,6 @@ function algoHexSum(md5){
   return { percent, vote };
 }
 
-// Algorithm 2: Delta
 function algoDelta(md5){
   let A=0,B=0;
   for(let i=0;i<md5.length;i++){
@@ -212,7 +199,6 @@ function algoDelta(md5){
   return { percent, vote };
 }
 
-// Algorithm 3: Reverse-Blocks
 function algoReverseBlocks(md5){
   const rev = md5.split('').reverse().join('');
   let sumBlocks = 0;
@@ -225,26 +211,23 @@ function algoReverseBlocks(md5){
   return { percent, vote };
 }
 
-// AI Vote
 function aiVote(md5){
   const a1 = algoHexSum(md5);
   const a2 = algoDelta(md5);
   const a3 = algoReverseBlocks(md5);
   const avgPercent = Math.round((a1.percent + a2.percent + a3.percent) / 3);
-  const votes = [a1.vote, a2.vote, a3.vote];
-  const taiVotes = votes.filter(v=>v==='Tai').length;
+  const taiVotes = [a1.vote,a2.vote,a3.vote].filter(v=>v==='Tai').length;
   const final = taiVotes >= 2 ? 'Tai' : 'Xiu';
   return { final, percent: avgPercent };
 }
 
-// ======== UI analyze ========
 function runAnalyze(){
   const md5raw = document.getElementById('md5Input').value.trim().toLowerCase();
   const resultEl = document.getElementById('result');
   resultEl.className = '';
   resultEl.textContent = '';
   if(!isMD5(md5raw)){
-    resultEl.textContent = '❌ MD5 không hợp lệ (32 ký tự hex)';
+    resultEl.textContent = '❌ MD5 không hợp lệ';
     return;
   }
   const out = aiVote(md5raw);
@@ -257,21 +240,11 @@ function runAnalyze(){
   }
 }
 
-// ======== Utilities ========
 function clearAll(){
   document.getElementById('md5Input').value = '';
   document.getElementById('result').textContent = '';
 }
-function clearLocalStorage(){
-  if(confirm('Xóa toàn bộ localStorage sẽ reset key đã dùng. Bạn có chắc?')){
-    localStorage.removeItem(LS_ACCESS);
-    localStorage.removeItem(LS_USED);
-    alert('Đã xóa localStorage (key đã dùng sẽ được reset).');
-    location.reload();
-  }
-}
 
-// ======== Auto restore on load ========
 window.addEventListener('load', ()=>{
   const restored = restoreAccess();
   if(!restored){
@@ -279,6 +252,16 @@ window.addEventListener('load', ()=>{
     document.getElementById('mainTool').style.display = 'none';
   }
 });
+
+/* 🔊 KÍCH HOẠT NHẠC TRÊN MOBILE (THÊM) */
+function startMusic() {
+  const music = document.getElementById('bgMusic');
+  music.volume = 0.6;
+  music.play().catch(()=>{});
+  document.removeEventListener('click', startMusic);
+}
+document.addEventListener('click', startMusic);
 </script>
+
 </body>
 </html>
