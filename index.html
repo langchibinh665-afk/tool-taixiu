@@ -23,7 +23,6 @@
 
 <body>
 
-<!-- 🔊 NHẠC NỀN (THÊM) -->
 <audio id="bgMusic" loop preload="auto">
   <source src="music.mp3" type="audio/mpeg">
 </audio>
@@ -31,7 +30,6 @@
 <h1>Tool Tài Xỉu - BÌNH</h1>
 <h1>cờ bạc không giúp ta đổi đời,nó chỉ giúp đổi số dư tk</h1>
 
-<!-- KEY -->
 <div id="keyBox" class="box">
   <h3>Nhập key</h3>
   <input id="keyInput" placeholder="Nhập key..." autocomplete="off" />
@@ -41,44 +39,26 @@
   <p id="keyMsg" class="small"></p>
 </div>
 
-<!-- MAIN TOOL -->
 <div id="mainTool" class="box" style="display:none;">
-  <h3>Phân tích từ MD5</h3>
-  <input id="md5Input" placeholder="Dán chuỗi MD5 " autocomplete="off"/>
+  <h3>Phân tích từ MD5 / SHA-256</h3>
+  <input id="md5Input" placeholder="Dán chuỗi MD5 (32) hoặc SHA-256 (64)" autocomplete="off"/>
   <div class="btns">
     <button onclick="runAnalyze()">Phân Tích</button>
   </div>
-
   <div id="keyTimer" aria-live="polite"></div>
   <div id="result" aria-live="polite"></div>
   <p class="small">Chú ý: tool chỉ là công cụ tham khảo .</p>
 </div>
 
 <script>
-/*
-  Cơ chế key:
-  - KEY_LIST: danh sách key mẫu (client-side). Bạn có thể bổ sung key ở đây.
-  - Khi user nhập key và Xác thực:
-      + Nếu key hợp lệ và chưa bị đánh dấu 'used', tạo access lưu local: {key, expiresAt}
-      + Bắt đầu đếm ngược thời gian hiển thị
-  - Khi thời gian hết:
-      + Xóa access, đánh dấu key vào used_keys (localStorage) => key không dùng lại được
-      + return user về màn nhập key
-  - Nếu user reload trang trong thời gian active: access được restore và đếm tiếp.
-  - Nếu user xóa localStorage: sẽ reset (giới hạn của phương pháp local-only)
-*/
-
-// ======== Danh sách key (client demo) =======
 const KEY_LIST = {
   "BINHVIPPRO": 10000000000,
   "bumanh":1000,
 };
 
-// localStorage keys
 const LS_ACCESS = 'tool_access_multi_v2';
 const LS_USED = 'tool_used_keys_v2';
 
-// ======== Key functions ========
 function getUsedKeys(){
   try { return JSON.parse(localStorage.getItem(LS_USED) || '[]'); } catch(e){ return []; }
 }
@@ -92,35 +72,29 @@ function isKeyUsed(key){
   return arr.includes(key);
 }
 
-// ======== Check key (validate) ========
 function checkKey(){
   const k = document.getElementById('keyInput').value.trim();
   const msg = document.getElementById('keyMsg');
   msg.textContent = '';
   if(!k){ msg.textContent = 'Nhập key trước.'; return; }
-
   if(isKeyUsed(k)){
     msg.textContent = 'Key này đã bị sử dụng trước đó. Không thể dùng lại.';
     return;
   }
-
   if(!KEY_LIST[k]){
     msg.textContent = 'Key không hợp lệ.';
     return;
   }
-
   const mins = Number(KEY_LIST[k]) || 60;
   const expiresAt = Date.now() + mins * 60 * 1000;
   const access = { key: k, expiresAt };
   localStorage.setItem(LS_ACCESS, JSON.stringify(access));
-
   document.getElementById('keyBox').style.display = 'none';
   document.getElementById('mainTool').style.display = 'block';
   document.getElementById('keyMsg').textContent = 'Đã xác thực. Tool sẵn sàng.';
   startKeyTimer();
 }
 
-// ======== Restore access on load ========
 function restoreAccess(){
   try{
     const raw = localStorage.getItem(LS_ACCESS);
@@ -141,7 +115,6 @@ function restoreAccess(){
   } catch(e){ return false; }
 }
 
-// ======== Key countdown ========
 let keyTimerInterval = null;
 function startKeyTimer(){
   clearInterval(keyTimerInterval);
@@ -168,21 +141,35 @@ function startKeyTimer(){
   }, 1000);
 }
 
-// ======== Analysis functions ========
-function isMD5(s){ return /^[a-fA-F0-9]{32}$/.test(s); }
-function hexPairToDec(pair){ return parseInt(pair,16); }
+// ========== NHẬN CẢ 32 VÀ 64 KÝ TỰ HEX ==========
+function normalizeHashInput(s){
+  let clean = s.trim().toLowerCase();
+  if(/^[a-f0-9]{32}$/.test(clean)) return { type:'md5', value: clean };
+  if(/^[a-f0-9]{64}$/.test(clean)) {
+    // Băm SHA-256 xuống MD5 kiểu tạm: lấy 32 ký tự cuối + XOR 2 nửa
+    let half1 = clean.slice(0,32);
+    let half2 = clean.slice(32);
+    let xored = '';
+    for(let i=0;i<32;i++){
+      let a = parseInt(half1[i],16);
+      let b = parseInt(half2[i],16);
+      xored += (a ^ b).toString(16);
+    }
+    return { type:'sha256', value: xored };
+  }
+  return null;
+}
 
+// ========== CÁC THUẬT TOÁN CŨ GIỮ NGUYÊN ==========
+function hexPairToDec(pair){ return parseInt(pair,16); }
 function algoHexSum(md5){
   const s = md5.slice(0,8);
   let sum = 0;
-  for(let i=0;i<8;i+=2){
-    sum += hexPairToDec(s.slice(i,i+2));
-  }
+  for(let i=0;i<8;i+=2) sum += hexPairToDec(s.slice(i,i+2));
   const percent = sum % 100;
   const vote = (sum % 2 === 0) ? 'Tai' : 'Xiu';
   return { percent, vote };
 }
-
 function algoDelta(md5){
   let A=0,B=0;
   for(let i=0;i<md5.length;i++){
@@ -198,7 +185,6 @@ function algoDelta(md5){
   const vote = percent >= 50 ? 'Tai' : 'Xiu';
   return { percent, vote };
 }
-
 function algoReverseBlocks(md5){
   const rev = md5.split('').reverse().join('');
   let sumBlocks = 0;
@@ -211,26 +197,72 @@ function algoReverseBlocks(md5){
   return { percent, vote };
 }
 
+// ========== NÂNG CẤP LOGIC MỚI ==========
+function entropyScore(str){
+  let freq = {};
+  for(let ch of str) freq[ch] = (freq[ch]||0)+1;
+  let entropy = 0;
+  for(let k in freq){
+    let p = freq[k]/str.length;
+    entropy -= p * Math.log2(p);
+  }
+  return Math.min(100, Math.floor(entropy * 20));
+}
+
+function byteDistribution(md5){
+  let sum=0;
+  for(let i=0;i<md5.length;i+=2){
+    sum += parseInt(md5.substr(i,2),16);
+  }
+  return sum % 100;
+}
+
+function advancedVote(md5){
+  const entropy = entropyScore(md5);
+  const byteVal = byteDistribution(md5);
+  const parity = (parseInt(md5.slice(-2),16) % 2 === 0) ? 1 : -1;
+  
+  let rawPercent = (entropy + byteVal + (parity>0? 15 : 5)) % 100;
+  rawPercent = Math.max(5, Math.min(95, rawPercent));
+  
+  const taiChance = rawPercent;
+  const final = taiChance >= 50 ? 'Tai' : 'Xiu';
+  return { percent: taiChance, final };
+}
+
 function aiVote(md5){
   const a1 = algoHexSum(md5);
   const a2 = algoDelta(md5);
   const a3 = algoReverseBlocks(md5);
-  const avgPercent = Math.round((a1.percent + a2.percent + a3.percent) / 3);
-  const taiVotes = [a1.vote,a2.vote,a3.vote].filter(v=>v==='Tai').length;
+  const a4 = advancedVote(md5);
+  
+  const weightedPercent = Math.round(
+    (a1.percent * 0.2 +
+     a2.percent * 0.25 +
+     a3.percent * 0.2 +
+     a4.percent * 0.35)
+  );
+  
+  const taiVotes = [a1.vote,a2.vote,a3.vote,a4.final].filter(v=>v==='Tai').length;
   const final = taiVotes >= 2 ? 'Tai' : 'Xiu';
-  return { final, percent: avgPercent };
+  return { final, percent: weightedPercent };
 }
 
 function runAnalyze(){
-  const md5raw = document.getElementById('md5Input').value.trim().toLowerCase();
+  const rawInput = document.getElementById('md5Input').value.trim();
   const resultEl = document.getElementById('result');
   resultEl.className = '';
   resultEl.textContent = '';
-  if(!isMD5(md5raw)){
-    resultEl.textContent = '❌ MD5 không hợp lệ';
+  
+  const norm = normalizeHashInput(rawInput);
+  if(!norm){
+    resultEl.textContent = '❌ Chỉ chấp nhận MD5 (32) hoặc SHA-256 (64 ký tự hex)';
     return;
   }
-  const out = aiVote(md5raw);
+  
+  const hashValue = norm.value; // luôn là 32 ký tự hex sau khi chuẩn hóa
+  const out = aiVote(hashValue);
+  
   if(out.final === 'Tai'){
     resultEl.className = 'tai';
     resultEl.innerHTML = `🎯 <strong>TÀI</strong> (${out.percent}%)`;
@@ -253,7 +285,6 @@ window.addEventListener('load', ()=>{
   }
 });
 
-/* 🔊 KÍCH HOẠT NHẠC TRÊN MOBILE (THÊM) */
 function startMusic() {
   const music = document.getElementById('bgMusic');
   music.volume = 0.6;
